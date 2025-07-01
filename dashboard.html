@@ -502,15 +502,18 @@
 
         // Conectar WebSocket
         function conectar() {
-            ws = new WebSocket('ws://smart-city-i1dr.onrender.com/ws/lights');
+            console.log('Intentando conectar a: wss://smart-city-i1dr.onrender.com/ws/lights');
+            ws = new WebSocket('wss://smart-city-i1dr.onrender.com/ws/lights');
             
             ws.onopen = () => {
+                console.log('WebSocket conectado exitosamente');
                 updateConnectionStatus(true);
                 showNotification('Conectado al sistema Smart City', 'success');
                 cargarDatosHistoricos(); // Cargar datos al conectar
             };
             
             ws.onmessage = (event) => {
+                console.log('Mensaje recibido:', event.data);
                 const data = JSON.parse(event.data);
                 
                 if (data.type === 'welcome') {
@@ -520,12 +523,14 @@
                 }
             };
             
-            ws.onclose = () => {
+            ws.onclose = (event) => {
+                console.log('WebSocket cerrado. Código:', event.code, 'Razón:', event.reason);
                 updateConnectionStatus(false);
                 showNotification('Desconectado del sistema', 'warning');
             };
 
-            ws.onerror = () => {
+            ws.onerror = (error) => {
+                console.error('Error de WebSocket:', error);
                 showNotification('Error de conexión', 'error');
             };
         }
@@ -533,8 +538,15 @@
         // Cargar datos históricos desde la API
         async function cargarDatosHistoricos() {
             try {
+                console.log('Cargando datos históricos desde: https://smart-city-i1dr.onrender.com/api/luces/estado-actual');
                 const response = await fetch('https://smart-city-i1dr.onrender.com/api/luces/estado-actual');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const estadosActuales = await response.json();
+                console.log('Datos históricos recibidos:', estadosActuales);
                 
                 estadosActuales.forEach(item => {
                     const zona = item.cuadra;
@@ -563,7 +575,7 @@
                 showNotification(`Cargados estados de ${estadosActuales.length} zonas`, 'success');
             } catch (error) {
                 console.error('Error cargando datos históricos:', error);
-                showNotification('Error cargando datos históricos', 'warning');
+                showNotification(`Error cargando datos históricos: ${error.message}`, 'warning');
             }
         }
 
