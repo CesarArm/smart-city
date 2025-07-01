@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Smart City</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .status-indicator {
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .status-connected {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-disconnected {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .chart-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .cuadras-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            max-width: 100%;
+            width: 100%;
+        }
+
+        @media (max-width: 1200px) {
+            .cuadras-grid {
+                grid-template-columns: 1fr;
+            }
+            .charts-grid {
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            .container {
+                padding: 10px;
+            }
+        }
+
+        .cuadra-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            min-width: 0;
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .chart-main {
+            height: 380px !important;
+            max-height: 400px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        .chart-main canvas {
+            height: 280px !important;
+            max-height: 280px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box;
+        }
+
+        .chart-wrapper {
+            width: 100%;
+            height: 280px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-mini {
+            position: relative;
+            height: 180px !important;
+            max-height: 180px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow: hidden;
+        }
+
+        .chart-mini canvas {
+            height: 180px !important;
+            max-height: 180px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        .cuadra-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .cuadra-name {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .cuadra-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .status-encendida {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-apagada {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .status-sin-datos {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .last-update {
+            font-size: 0.8em;
+            color: #7f8c8d;
+            margin-top: 10px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #e74c3c;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification.success {
+            background: #27ae60;
+        }
+
+        .notification.warning {
+            background: #f39c12;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .alert-button {
+            background: #e74c3c;
+        }
+
+        .alert-button:hover {
+            background: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>�️ Dashboard Smart City</h1>
+            <div class="connection-status">
+                <div id="connectionStatus" class="status-indicator status-disconnected">
+                    Desconectado
+                </div>
+                <div>
+                    <button id="connectBtn" onclick="conectar()">Conectar</button>
+                    <button id="disconnectBtn" onclick="desconectar()" disabled>Desconectar</button>
+                    <button onclick="requestNotificationPermission()" class="alert-button">
+                        Activar Notificaciones
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div id="totalCuadras" class="stat-number">0</div>
+                <div class="stat-label">Zonas Monitoreadas</div>
+            </div>
+            <div class="stat-card">
+                <div id="zonasEncendidas" class="stat-number">0</div>
+                <div class="stat-label">Zonas Activas</div>
+            </div>
+            <div class="stat-card">
+                <div id="zonasApagadas" class="stat-number">0</div>
+                <div class="stat-label">Zonas Inactivas</div>
+            </div>
+            <div class="stat-card">
+                <div id="ultimaActividad" class="stat-number">--:--</div>
+                <div class="stat-label">Última Actividad</div>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="charts-grid">
+            <div class="chart-container chart-main">
+                <div class="chart-title">📈 Estados de Infraestructura por Tiempo</div>
+                <div class="chart-wrapper">
+                    <canvas id="timeChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container chart-main">
+                <div class="chart-title">📊 Distribución por Zona</div>
+                <div class="chart-wrapper">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zonas individuales -->
+        <div id="zonasContainer" class="cuadras-grid">
+            <!-- Las zonas se generarán dinámicamente -->
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let zonasData = {};
+        let timeChart = null;
+        let distributionChart = null;
+        let historicalData = [];
+
+        // Configuración de gráficos
+        const timeChartConfig = {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: []
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        min: 0,
+                        max: 1,
+                        ticks: {
+                            stepSize: 1,
+                            count: 2,
+                            callback: function(value) {
+                                return value === 1 ? 'Activa' : 'Inactiva';
+                            }
+                        }
+                    },
+                    x: {
+                        type: 'category',
+                        display: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 10
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: 2
+                    }
+                },
+                layout: {
+                    padding: {
+                        top: 10,
+                        right: 10,
+                        bottom: 15,
+                        left: 10
+                    }
+                }
+            }
+        };
+
+        const distributionChartConfig = {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#27ae60',
+                        '#e74c3c',
+                        '#f39c12',
+                        '#3498db',
+                        '#9b59b6',
+                        '#1abc9c'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 8
+                        }
+                    }
+                },
+                layout: {
+                    padding: 5
+                }
+            }
+        };
+
+        // Inicializar gráficos
+        function initCharts() {
+            const timeCtx = document.getElementById('timeChart').getContext('2d');
+            const distributionCtx = document.getElementById('distributionChart').getContext('2d');
+
+            // Forzar tamaño del canvas antes de crear el gráfico
+            const timeCanvas = document.getElementById('timeChart');
+            timeCanvas.style.width = '100%';
+            timeCanvas.style.height = '280px';
+            timeCanvas.style.maxWidth = '100%';
+            timeCanvas.style.maxHeight = '280px';
+
+            const distributionCanvas = document.getElementById('distributionChart');
+            distributionCanvas.style.width = '100%';
+            distributionCanvas.style.height = '280px';
+            distributionCanvas.style.maxWidth = '100%';
+            distributionCanvas.style.maxHeight = '280px';
+
+            timeChart = new Chart(timeCtx, timeChartConfig);
+            distributionChart = new Chart(distributionCtx, distributionChartConfig);
+        }
+
+        // Conectar WebSocket
+        function conectar() {
+            ws = new WebSocket('ws://localhost:8080/ws/lights');
+            
+            ws.onopen = () => {
+                updateConnectionStatus(true);
+                showNotification('Conectado al sistema Smart City', 'success');
+                cargarDatosHistoricos(); // Cargar datos al conectar
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'welcome') {
+                    console.log('Bienvenido:', data.message);
+                } else if (data.type === 'update') {
+                    handleNewData(data.data);
+                }
+            };
+            
+            ws.onclose = () => {
+                updateConnectionStatus(false);
+                showNotification('Desconectado del sistema', 'warning');
+            };
+
+            ws.onerror = () => {
+                showNotification('Error de conexión', 'error');
+            };
+        }
+
+        // Cargar datos históricos desde la API
+        async function cargarDatosHistoricos() {
+            try {
+                const response = await fetch('http://localhost:8080/api/luces/estado-actual');
+                const estadosActuales = await response.json();
+                
+                estadosActuales.forEach(item => {
+                    const zona = item.cuadra;
+                    const estado = item.estado;
+                    const tiempo = new Date(item.timestamp);
+
+                    if (!zonasData[zona]) {
+                        zonasData[zona] = {
+                            estado: estado,
+                            ultimaActualizacion: tiempo,
+                            historial: []
+                        };
+                        createZonaCard(zona);
+                    }
+
+                    zonasData[zona].estado = estado;
+                    zonasData[zona].ultimaActualizacion = tiempo;
+                    
+                    updateZonaCard(zona);
+                });
+
+                updateStatistics();
+                updateCharts();
+                updateLastActivity();
+                
+                showNotification(`Cargados estados de ${estadosActuales.length} zonas`, 'success');
+            } catch (error) {
+                console.error('Error cargando datos históricos:', error);
+                showNotification('Error cargando datos históricos', 'warning');
+            }
+        }
+
+        function desconectar() {
+            if (ws) {
+                ws.close();
+            }
+        }
+
+        // Manejar nuevos datos
+        function handleNewData(data) {
+            const zona = data.cuadra;
+            const estado = data.estado;
+            const tiempo = new Date(data.timestamp);
+
+            // Actualizar datos de la zona
+            if (!zonasData[zona]) {
+                zonasData[zona] = {
+                    estado: estado,
+                    ultimaActualizacion: tiempo,
+                    historial: []
+                };
+                createZonaCard(zona);
+                
+                // Agregar el primer estado al historial
+                zonasData[zona].historial.push({
+                    tiempo: tiempo,
+                    estado: estado
+                });
+            } else {
+                const estadoAnterior = zonasData[zona].estado;
+                
+                // Solo actualizar si hay un cambio real de estado
+                if (estadoAnterior !== estado) {
+                    zonasData[zona].estado = estado;
+                    zonasData[zona].ultimaActualizacion = tiempo;
+
+                    // Agregar al historial solo si el estado cambió
+                    zonasData[zona].historial.push({
+                        tiempo: tiempo,
+                        estado: estado
+                    });
+
+                    // Mantener solo últimas 10 entradas por zona
+                    if (zonasData[zona].historial.length > 10) {
+                        zonasData[zona].historial = zonasData[zona].historial.slice(-10);
+                    }
+
+                    // Detectar caída (cambio a APAGADA)
+                    if (estadoAnterior === 'ENCENDIDA' && estado === 'APAGADA') {
+                        showNotification(`⚠️ ALERTA: ${zona} se ha DESACTIVADO`, 'error');
+                        sendBrowserNotification(`Alerta Smart City`, `${zona} se ha desactivado`);
+                    }
+                } else {
+                    // Solo actualizar el timestamp sin agregar al historial
+                    zonasData[zona].ultimaActualizacion = tiempo;
+                }
+            }
+
+            // Agregar al historial global solo si es un estado nuevo o cambio
+            if (!zonasData[zona] || zonasData[zona].estado !== estado) {
+                historicalData.push({
+                    zona: zona,
+                    tiempo: tiempo,
+                    estado: estado
+                });
+
+                // Mantener solo últimas 30 entradas globales
+                if (historicalData.length > 30) {
+                    historicalData = historicalData.slice(-30);
+                }
+            }
+
+            // Actualizar UI
+            updateZonaCard(zona);
+            updateStatistics();
+            updateCharts();
+            updateLastActivity();
+        }
+
+        // Crear tarjeta de zona
+        function createZonaCard(zona) {
+            const container = document.getElementById('zonasContainer');
+            const card = document.createElement('div');
+            card.className = 'cuadra-card';
+            card.id = `zona-${zona}`;
+            
+            card.innerHTML = `
+                <div class="cuadra-header">
+                    <div class="cuadra-name">${zona}</div>
+                    <div class="cuadra-status status-sin-datos">Sin datos</div>
+                </div>
+                <div class="chart-mini">
+                    <canvas id="chart-${zona}"></canvas>
+                </div>
+                <div class="last-update">Última actualización: --</div>
+            `;
+            
+            container.appendChild(card);
+
+            // Crear mini gráfico para la zona con tamaño fijo
+            const ctx = document.getElementById(`chart-${zona}`).getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Estado',
+                        data: [],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false, // Desactivar animaciones para evitar problemas de tamaño
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            min: 0,
+                            max: 1,
+                            ticks: {
+                                stepSize: 1,
+                                count: 2,
+                                callback: function(value) {
+                                    return value === 1 ? 'ACTIVA' : 'INACTIVA';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    layout: {
+                        padding: {
+                            top: 10,
+                            right: 10,
+                            bottom: 10,
+                            left: 10
+                        }
+                    }
+                }
+            });
+        }
+
+        // Actualizar tarjeta de zona
+        function updateZonaCard(zona) {
+            const card = document.getElementById(`zona-${zona}`);
+            if (!card) return;
+
+            const data = zonasData[zona];
+            const statusElement = card.querySelector('.cuadra-status');
+            const updateElement = card.querySelector('.last-update');
+
+            // Actualizar estado
+            statusElement.textContent = data.estado === 'ENCENDIDA' ? 'ACTIVA' : 'INACTIVA';
+            statusElement.className = `cuadra-status ${data.estado === 'ENCENDIDA' ? 'status-encendida' : 'status-apagada'}`;
+
+            // Actualizar timestamp
+            updateElement.textContent = `Última actualización: ${data.ultimaActualizacion.toLocaleTimeString()}`;
+
+            // Actualizar mini gráfico con datos filtrados para evitar duplicados
+            const chart = Chart.getChart(`chart-${zona}`);
+            if (chart) {
+                // Filtrar historial para mostrar solo cambios de estado
+                const filteredHistory = [];
+                let lastState = null;
+                
+                data.historial.forEach(entry => {
+                    if (entry.estado !== lastState) {
+                        filteredHistory.push(entry);
+                        lastState = entry.estado;
+                    }
+                });
+                
+                // Tomar solo los últimos 8 cambios para mantener legibilidad
+                const recentChanges = filteredHistory.slice(-8);
+                
+                const labels = recentChanges.map(h => h.tiempo.toLocaleTimeString());
+                const valores = recentChanges.map(h => h.estado === 'ENCENDIDA' ? 1 : 0);
+
+                // Limpiar y actualizar datos
+                chart.data.labels = labels;
+                chart.data.datasets[0].data = valores;
+                
+                // Forzar actualización sin animación
+                chart.update('none');
+                
+                // Asegurar que el canvas mantenga su tamaño
+                const canvas = chart.canvas;
+                canvas.style.height = '180px';
+                canvas.style.maxHeight = '180px';
+                canvas.style.width = '100%';
+                canvas.style.maxWidth = '100%';
+            }
+        }
+
+        // Actualizar estadísticas
+        function updateStatistics() {
+            const zonas = Object.keys(zonasData);
+            const activas = zonas.filter(z => zonasData[z].estado === 'ENCENDIDA').length;
+            const inactivas = zonas.filter(z => zonasData[z].estado === 'APAGADA').length;
+
+            document.getElementById('totalCuadras').textContent = zonas.length;
+            document.getElementById('zonasEncendidas').textContent = activas;
+            document.getElementById('zonasApagadas').textContent = inactivas;
+        }
+
+        // Actualizar gráficos principales
+        function updateCharts() {
+            // Gráfico de distribución
+            const zonas = Object.keys(zonasData);
+            const activas = zonas.filter(z => zonasData[z].estado === 'ENCENDIDA').length;
+            const inactivas = zonas.filter(z => zonasData[z].estado === 'APAGADA').length;
+
+            distributionChart.data.labels = ['Activas', 'Inactivas'];
+            distributionChart.data.datasets[0].data = [activas, inactivas];
+            distributionChart.update('none');
+
+            // Actualizar gráfico de tiempo con límite estricto
+            updateTimeChartWithLimit();
+        }
+
+        // Actualizar gráfico de tiempo con límite estricto de datos
+        function updateTimeChartWithLimit() {
+            const maxPoints = 15; // Máximo 15 puntos para mantener legibilidad
+            
+            // Limpiar completamente el gráfico
+            timeChart.data.labels = [];
+            timeChart.data.datasets = [];
+            
+            const zonas = Object.keys(zonasData);
+            if (zonas.length === 0) {
+                timeChart.update('none');
+                return;
+            }
+            
+            // Obtener todos los puntos temporales de todas las zonas y limitarlos
+            let allPoints = [];
+            zonas.forEach(zona => {
+                if (zonasData[zona].historial && zonasData[zona].historial.length > 0) {
+                    // Tomar solo los últimos puntos de cada zona
+                    const recentPoints = zonasData[zona].historial.slice(-maxPoints);
+                    recentPoints.forEach(point => {
+                        allPoints.push({
+                            tiempo: point.tiempo,
+                            zona: zona,
+                            estado: point.estado
+                        });
+                    });
+                }
+            });
+            
+            // Ordenar por tiempo y tomar solo los más recientes
+            allPoints.sort((a, b) => a.tiempo.getTime() - b.tiempo.getTime());
+            allPoints = allPoints.slice(-maxPoints);
+            
+            if (allPoints.length === 0) {
+                timeChart.update('none');
+                return;
+            }
+            
+            // Crear labels únicos basados en los tiempos más recientes
+            const uniqueTimes = [...new Set(allPoints.map(p => p.tiempo.getTime()))]
+                .sort((a, b) => a - b)
+                .slice(-maxPoints)
+                .map(timestamp => new Date(timestamp));
+            
+            timeChart.data.labels = uniqueTimes.map(t => t.toLocaleTimeString());
+            
+            // Crear datasets para cada zona
+            const colors = ['#3498db', '#e74c3c', '#27ae60', '#f39c12', '#9b59b6', '#1abc9c'];
+            
+            zonas.forEach((zona, index) => {
+                const zonaData = zonasData[zona];
+                if (!zonaData.historial || zonaData.historial.length === 0) return;
+                
+                // Tomar solo los últimos puntos de esta zona
+                const recentHistory = zonaData.historial.slice(-maxPoints);
+                
+                // Mapear datos para los tiempos únicos
+                const dataPoints = uniqueTimes.map(time => {
+                    const found = recentHistory.find(h => 
+                        Math.abs(h.tiempo.getTime() - time.getTime()) < 2000 // 2 segundos de tolerancia
+                    );
+                    return found ? (found.estado === 'ENCENDIDA' ? 1 : 0) : null;
+                });
+                
+                timeChart.data.datasets.push({
+                    label: zona,
+                    data: dataPoints,
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length] + '20',
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    spanGaps: false
+                });
+            });
+            
+            timeChart.update('none');
+        }
+
+        function updateLastActivity() {
+            const ahora = new Date();
+            document.getElementById('ultimaActividad').textContent = ahora.toLocaleTimeString();
+        }
+
+        // Actualizar estado de conexión
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+
+            if (connected) {
+                statusElement.textContent = 'Conectado';
+                statusElement.className = 'status-indicator status-connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else {
+                statusElement.textContent = 'Desconectado';
+                statusElement.className = 'status-indicator status-disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+            }
+        }
+
+        // Sistema de notificaciones
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+
+        // Notificaciones del navegador
+        function requestNotificationPermission() {
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        showNotification('Notificaciones activadas', 'success');
+                    }
+                });
+            }
+        }
+
+        function sendBrowserNotification(title, message) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: message,
+                    icon: '🏠',
+                    badge: '⚠️'
+                });
+            }
+        }
+
+        // Inicializar cuando se carga la página
+        window.onload = function() {
+            initCharts();
+            updateConnectionStatus(false);
+            
+            // Limpiar datos periódicamente para evitar acumulación
+            setInterval(cleanupOldData, 30000); // Cada 30 segundos
+        };
+        
+        // Función para limpiar datos antiguos periódicamente
+        function cleanupOldData() {
+            const maxAge = 5 * 60 * 1000; // 5 minutos
+            const now = new Date();
+            
+            Object.keys(zonasData).forEach(zona => {
+                if (zonasData[zona].historial) {
+                    zonasData[zona].historial = zonasData[zona].historial.filter(entry => 
+                        now.getTime() - entry.tiempo.getTime() < maxAge
+                    );
+                    
+                    // Asegurar que no queden más de 10 entradas
+                    if (zonasData[zona].historial.length > 10) {
+                        zonasData[zona].historial = zonasData[zona].historial.slice(-10);
+                    }
+                }
+            });
+            
+            // Limpiar historial global
+            historicalData = historicalData.filter(entry => 
+                now.getTime() - entry.tiempo.getTime() < maxAge
+            );
+            
+            if (historicalData.length > 30) {
+                historicalData = historicalData.slice(-30);
+            }
+            
+            console.log('Limpieza automática de datos completada');
+        }
+    </script>
+</body>
+</html>
