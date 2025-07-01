@@ -502,7 +502,7 @@
 
         // Conectar WebSocket
         function conectar() {
-            ws = new WebSocket('ws://localhost:8080/ws/lights');
+            ws = new WebSocket('ws://smart-city-i1dr.onrender.com/ws/lights');
             
             ws.onopen = () => {
                 updateConnectionStatus(true);
@@ -533,7 +533,7 @@
         // Cargar datos históricos desde la API
         async function cargarDatosHistoricos() {
             try {
-                const response = await fetch('http://localhost:8080/api/luces/estado-actual');
+                const response = await fetch('https://smart-city-i1dr.onrender.com/api/luces/estado-actual');
                 const estadosActuales = await response.json();
                 
                 estadosActuales.forEach(item => {
